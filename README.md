@@ -1,6 +1,6 @@
 # Dripping
 
-Dripping is a lightweight IP monitor written in Go that tracks your public IP address and sends Discord notifications when it changes. It compares the current IP (fetched from ifconfig.co) with the expected IP specified in a JSON configuration file and persists its state in a JSON file to avoid duplicate alerts after restarts. Licensed under GNU GPL 3.0.
+Dripping is a lightweight IP monitor written in Go that tracks your public IP address and sends Discord notifications when it changes. It compares the current IP (fetched from ifconfig.co) with the expected IP specified in a JSON configuration file.
 
 ## Features
 
