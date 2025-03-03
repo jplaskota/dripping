@@ -15,5 +15,5 @@ Dripping is a lightweight IP monitor written in Go that tracks your public IP ad
 Install Dripping with a single command:
 
 ```bash
-curl -sSL https://github.com/yourusername/dripping/raw/main/dripping_install.sh | bash
+curl -sSL https://github.com/jplaskota/dripping/raw/main/dripping_install.sh | bash
 ```
