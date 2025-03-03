@@ -14,7 +14,7 @@ sudo mkdir -p $CONFIG_DIR
 
 # Download the binary (replace the URL with the actual download URL for your binary).
 echo "Downloading binary..."
-curl -L -o $BIN_NAME https://github.com/yourusername/dripping/releases/latest/download/dripping_linux_amd64
+curl -L -o $BIN_NAME https://github.com/jplaskota/dripping/releases/latest/download/dripping_linux_amd64
 chmod +x $BIN_NAME
 sudo mv $BIN_NAME $INSTALL_DIR
 
