@@ -1,0 +1,12 @@
+# Build artifacts
+/bin/
+/build/
+
+# Built binaries
+dripping_linux*
+
+# Docker test files
+Dockerfile
+
+# OS specific files
+.DS_Store

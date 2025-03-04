@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -28,7 +28,7 @@ type State struct {
 
 // loadConfig reads the configuration from a JSON file.
 func loadConfig(path string) (*Config, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func loadConfig(path string) (*Config, error) {
 
 // loadState reads the last state from a JSON file.
 func loadState(path string) (*State, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -58,19 +58,27 @@ func saveState(path string, state *State) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0644)
 }
 
 // getCurrentIP fetches the current IP address from ifconfig.co.
 func getCurrentIP() (string, error) {
-	resp, err := http.Get("https://ifconfig.co")
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	resp, err := client.Get("https://ifconfig.co")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to fetch IP: %v", err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read response: %v", err)
 	}
 	return strings.TrimSpace(string(body)), nil
 }
@@ -80,14 +88,19 @@ func sendDiscordNotification(webhookURL, message string) error {
 	payload := map[string]string{"content": message}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal payload: %v", err)
 	}
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewReader(payloadBytes))
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Post(webhookURL, "application/json", bytes.NewReader(payloadBytes))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send notification: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 && resp.StatusCode != 204 {
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("failed to send notification, status code: %d", resp.StatusCode)
 	}
 	return nil
