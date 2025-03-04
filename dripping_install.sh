@@ -1,4 +1,6 @@
 #!/bin/bash
+
+# Exit on error, but allow us to handle errors gracefully
 set -e
 
 BIN_NAME="dripping"
@@ -6,16 +8,51 @@ INSTALL_DIR="/usr/local/bin"
 SERVICE_FILE="/etc/systemd/system/dripping.service"
 CONFIG_DIR="/etc/dripping"
 CONFIG_FILE="$CONFIG_DIR/config.json"
+STATE_FILE="$CONFIG_DIR/state.json"
 
-echo "Installing Dripping IP Checker..."
+# Check if we're running as root or with sudo
+if [ "$(id -u)" -ne 0 ] && ! sudo -v &>/dev/null; then
+    echo "Error: This script requires root privileges. Please run with sudo."
+    exit 1
+fi
 
-# Create configuration directory if it doesn't exist.
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" &> /dev/null
+}
+
+# Check if systemd is available
+if ! command_exists systemctl; then
+    echo "Error: This script requires systemd, which is not available on this system."
+    exit 1
+fi
+
+# Check if dripping is already installed
+if [ -f "$INSTALL_DIR/$BIN_NAME" ]; then
+    echo "Dripping is already installed. Updating to the latest version..."
+else
+    echo "Installing Dripping IP Checker..."
+fi
+
+# Create configuration directory if it doesn't exist
 sudo mkdir -p $CONFIG_DIR
 
-# Download the binary (replace the URL with the actual download URL for your binary).
+# Download the binary
 echo "Downloading binary..."
-curl -L -o $BIN_NAME https://github.com/jplaskota/dripping/releases/latest/download/dripping_linux_amd64
+if ! curl -L -o $BIN_NAME https://github.com/jplaskota/dripping/releases/latest/download/dripping_linux_amd64; then
+    echo "Error: Failed to download the binary. Please check your internet connection and try again."
+    exit 1
+fi
+
+# Verify the binary is executable
 chmod +x $BIN_NAME
+if ! file $BIN_NAME | grep -q "executable"; then
+    echo "Error: The downloaded file is not a valid executable."
+    rm $BIN_NAME
+    exit 1
+fi
+
+# Move the binary to the installation directory
 sudo mv $BIN_NAME $INSTALL_DIR
 
 # Create default configuration file if it does not exist.
@@ -44,15 +81,29 @@ RestartSec=60
 WantedBy=multi-user.target
 EOF
 
-# Create an empty state file if it does not exist.
-STATE_FILE="/etc/dripping/state.json"
+# Create an empty state file if it does not exist
 if [ ! -f "$STATE_FILE" ]; then
-  sudo echo "{}" > $STATE_FILE
+    echo "{}" | sudo tee $STATE_FILE > /dev/null
+    sudo chmod 644 $STATE_FILE
 fi
 
-# Reload systemd and start the service.
+# Reload systemd and manage the service
+echo "Configuring and starting the service..."
 sudo systemctl daemon-reload
-sudo systemctl enable dripping.service
-sudo systemctl start dripping.service
 
-echo "Installation complete."
+# Enable the service to start on boot
+sudo systemctl enable dripping.service
+
+# Restart the service if it's already running, otherwise start it
+if sudo systemctl is-active --quiet dripping.service; then
+    sudo systemctl restart dripping.service
+    echo "Dripping service has been updated and restarted."
+else
+    sudo systemctl start dripping.service
+    echo "Dripping service has been started."
+fi
+
+echo "Installation complete. Dripping is now monitoring your IP address."
+echo "You can check the service status with: sudo systemctl status dripping.service"
+echo "Configuration file is located at: $CONFIG_FILE"
+echo "State file is located at: $STATE_FILE"
