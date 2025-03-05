@@ -13,6 +13,9 @@ import (
 	"time"
 )
 
+// Version information
+var version = "dev" // This will be set during build
+
 // Config stores the application settings.
 type Config struct {
 	ExpectedIP        string `json:"expected_ip"`
@@ -110,7 +113,14 @@ func main() {
 	// Parse command line flags for configuration file and state file paths.
 	configPath := flag.String("config", "config.json", "Path to configuration file")
 	statePath := flag.String("state", "state.json", "Path to persistent state file")
+	showVersion := flag.Bool("version", false, "Show version information")
 	flag.Parse()
+
+	// Handle version flag
+	if *showVersion {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	// Load configuration.
 	config, err := loadConfig(*configPath)

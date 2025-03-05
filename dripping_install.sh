@@ -27,11 +27,31 @@ if ! command_exists systemctl; then
     exit 1
 fi
 
-# Check if dripping is already installed
-if [ -f "$INSTALL_DIR/$BIN_NAME" ]; then
-    echo "Dripping is already installed. Updating to the latest version..."
+# Function to get version from binary
+get_version() {
+    local binary=$1
+    if [ -f "$binary" ]; then
+        "$binary" -version 2>/dev/null || echo "unknown"
+    else
+        echo "not_installed"
+    fi
+}
+
+# Get current installed version
+CURRENT_VERSION=$(get_version "$INSTALL_DIR/$BIN_NAME")
+
+# Download version information from latest release
+LATEST_VERSION=$(curl -s https://api.github.com/repos/jplaskota/dripping/releases/latest | grep -Po '"tag_name": "\K[^"]*')
+
+if [ "$CURRENT_VERSION" != "not_installed" ]; then
+    if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
+        echo "Dripping version $CURRENT_VERSION is already the latest version."
+        exit 0
+    else
+        echo "Updating Dripping from version $CURRENT_VERSION to $LATEST_VERSION..."
+    fi
 else
-    echo "Installing Dripping IP Checker..."
+    echo "Installing Dripping IP Checker version $LATEST_VERSION..."
 fi
 
 # Create configuration directory if it doesn't exist
