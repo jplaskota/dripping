@@ -1,4 +1,7 @@
 {
   "expected_ip": "1.2.3.4",
-  "discord_webhook_url": "https://discord.com/api/webhooks/your_webhook_id/your_webhook_token"
+  "discord_webhook_url": "https://discord.com/api/webhooks/your_webhook_id/your_webhook_token",
+  "check_interval": 5,
+  "change_message": "Warning: IP changed! Current IP: %s at %s",
+  "restore_message": "Info: IP returned to expected state (%s) at %s"
 }

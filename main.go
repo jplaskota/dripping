@@ -20,6 +20,9 @@ var version = "dev" // This will be set during build
 type Config struct {
 	ExpectedIP        string `json:"expected_ip"`
 	DiscordWebhookURL string `json:"discord_webhook_url"`
+	CheckInterval     int    `json:"check_interval"`     // Time between checks in minutes
+	ChangeMessage     string `json:"change_message"`     // Custom message when IP changes from expected
+	RestoreMessage    string `json:"restore_message"`    // Custom message when IP returns to expected
 }
 
 // State stores the last fetched IP and the event time.
@@ -162,9 +165,17 @@ func main() {
 			if matches != lastMatches {
 				var message string
 				if !matches {
-					message = fmt.Sprintf("Warning: IP changed! Current IP: %s at %s", currentIP, now)
+					if config.ChangeMessage != "" {
+						message = fmt.Sprintf(config.ChangeMessage, currentIP, now)
+					} else {
+						message = fmt.Sprintf("Warning: IP changed! Current IP: %s at %s", currentIP, now)
+					}
 				} else {
-					message = fmt.Sprintf("Info: IP returned to expected state (%s) at %s", config.ExpectedIP, now)
+					if config.RestoreMessage != "" {
+						message = fmt.Sprintf(config.RestoreMessage, config.ExpectedIP, now)
+					} else {
+						message = fmt.Sprintf("Info: IP returned to expected state (%s) at %s", config.ExpectedIP, now)
+					}
 				}
 				if err := sendDiscordNotification(config.DiscordWebhookURL, message); err != nil {
 					log.Printf("Error sending Discord notification: %v", err)
@@ -185,7 +196,12 @@ func main() {
 				log.Println("No state change detected. No notification sent.")
 			}
 		}
-		// Wait 5 minutes before checking again.
-		time.Sleep(5 * time.Minute)
+		// Use the configured check interval or default to 5 minutes
+		checkInterval := 5 // Default to 5 minutes
+		if config.CheckInterval > 0 {
+			checkInterval = config.CheckInterval
+		}
+		log.Printf("Waiting %d minutes before next check...", checkInterval)
+		time.Sleep(time.Duration(checkInterval) * time.Minute)
 	}
 }
